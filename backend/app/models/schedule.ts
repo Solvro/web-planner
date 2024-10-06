@@ -5,7 +5,7 @@ import Group from '#models/group'
 
 export default class Schedule extends BaseModel {
   @column({ isPrimary: true })
-  declare id: number
+  declare id: string
 
   @column()
   declare name: string

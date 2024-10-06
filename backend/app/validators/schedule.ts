@@ -2,6 +2,7 @@ import vine from '@vinejs/vine'
 
 export const createScheduleValidator = vine.compile(
   vine.object({
+    id: vine.string(),
     name: vine.string(),
     userId: vine.string(),
   })

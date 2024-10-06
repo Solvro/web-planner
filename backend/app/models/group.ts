@@ -2,7 +2,7 @@ import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 export default class Group extends BaseModel {
   @column({ isPrimary: true })
-  declare id: number
+  declare id: string
 
   @column()
   declare name: string
@@ -20,7 +20,7 @@ export default class Group extends BaseModel {
   declare lecturer: string
 
   @column()
-  declare week: '' | 'TP' | 'TN'
+  declare week: '-' | 'TP' | 'TN'
 
   @column()
   declare day: string

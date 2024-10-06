@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { GetServerSideProps, InferGetServerSidePropsType } from "next";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { BiSave } from "react-icons/bi";
 
 import type { ApiFacultyDataGet } from "@/app/api/data/[facultyId]/route";
 import { type ExtendedGroup } from "@/atoms/planFamily";
@@ -12,7 +13,7 @@ import { RegistrationCombobox } from "@/components/RegistrationCombobox";
 import { Seo } from "@/components/SEO";
 import { SolvroLogo } from "@/components/SolvroLogo";
 import { Accordion } from "@/components/ui/accordion";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,6 +27,41 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlan } from "@/lib/usePlan";
 import { cn } from "@/lib/utils";
 import { Day, Frequency, LessonType } from "@/services/usos/types";
+
+interface Group {
+  groupId: string;
+  groupNumber: string;
+  lecturer: string;
+  day: string;
+  week: "" | "TN" | "TP";
+  startTime: string;
+  endTime: string;
+  courseId: string;
+  courseName: string;
+  isChecked: boolean;
+  courseType: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  isChecked: boolean;
+  registrationId: string;
+  type: string;
+  groups?: Group[];
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  courses: Course[];
+  registrations: Registration[];
+}
+
+interface Registration {
+  id: string;
+  name: string;
+}
 
 const faculties = [
   {
@@ -130,6 +166,126 @@ const registrationReplacer = (name: string) => {
     .replace("2024/25-Z", "")
     .trim();
   return newName.charAt(0).toUpperCase() + newName.slice(1);
+};
+
+const removeRegistrationIdSuffix = (id: string): string => {
+  return id.replace(/-\d{2,4}(\/\d{2})?(Z)?$/, "");
+};
+
+const createPostRequest = async (planId: string) => {
+  const id = `${planId}-plan-v2`;
+  const data = window.localStorage.getItem(id);
+
+  if (data !== null) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const jsonData: Plan = JSON.parse(data);
+
+      const registrationBody = jsonData.registrations.map((reg) => ({
+        id: removeRegistrationIdSuffix(reg.id),
+        name: reg.name,
+        round: 1,
+        department: "test",
+      }));
+
+      const coursesBody = jsonData.courses
+        .filter((course) => course.isChecked)
+        .map((course) => ({
+          id: course.id,
+          name: course.name,
+          registrationId: removeRegistrationIdSuffix(course.registrationId),
+        }));
+
+      const groupsBody = jsonData.courses
+        .flatMap((course) => course.groups ?? [])
+        .filter((group) => group.isChecked)
+        .map((group) => ({
+          id: group.groupId,
+          group: group.groupNumber,
+          lecturer: group.lecturer,
+          day: group.day,
+          week: group.week === "" ? "-" : group.week,
+          startTime: group.startTime,
+          endTime: group.endTime,
+          courseId: group.courseId,
+          type: group.courseType,
+          name: group.courseName,
+        }));
+
+      try {
+        await Promise.all(
+          registrationBody.map(async (reg) => {
+            try {
+              await fetch("http://localhost:3333/registrations", {
+                method: "post",
+                body: JSON.stringify(reg),
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
+              });
+            } catch (e) {
+              /* empty */
+            }
+          }),
+        );
+      } catch (e) {
+        /* empty */
+      }
+
+      try {
+        await Promise.all(
+          coursesBody.map(async (course) => {
+            try {
+              await fetch(
+                `http://localhost:3333/registrations/${removeRegistrationIdSuffix(course.registrationId)}/courses`,
+                {
+                  method: "post",
+                  body: JSON.stringify(course),
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  credentials: "include",
+                },
+              );
+            } catch (e) {
+              /* empty */
+            }
+          }),
+        );
+      } catch (e) {
+        /* empty */
+      }
+
+      try {
+        await Promise.all(
+          groupsBody.map(async (group) => {
+            try {
+              await fetch(
+                `http://localhost:3333/users/123/schedules/${planId}/groups`,
+                {
+                  method: "post",
+                  body: JSON.stringify(group),
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  credentials: "include",
+                },
+              );
+            } catch (e) {
+              /* empty */
+            }
+          }),
+        );
+      } catch (e) {
+        /* empty */
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
 };
 
 const CreatePlan = ({
@@ -265,6 +421,13 @@ const CreatePlan = ({
                   </div>
                 </form>
                 <PlanDisplayLink id={plan.id} />
+                <Button
+                  onClick={() => {
+                    void createPostRequest(planId);
+                  }}
+                >
+                  <BiSave />
+                </Button>
               </div>
             </div>
 

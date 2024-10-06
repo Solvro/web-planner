@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Schedule from '#models/schedule'
 import { createScheduleValidator, updateScheduleValidator } from '#validators/schedule'
+import { createGroupValidator } from '#validators/group'
 export default class SchedulesController {
   /**
    * Display a list of user schedules
@@ -32,7 +33,7 @@ export default class SchedulesController {
   }
 
   /**
-   * Show schedule with matching courses
+   * Show schedule with matching groups
    */
   async show({ params, auth }: HttpContext) {
     const userId = params.user_id
@@ -79,5 +80,30 @@ export default class SchedulesController {
     }
     await schedule.delete()
     return { message: 'Schedule successfully deleted.' }
+  }
+
+  /**
+   * Add a course to a schedule
+   */
+  async addCourse({ params, request, auth }: HttpContext) {
+    const userId = params.user_id
+    // const authUserId = auth.user?.id
+
+    // if (userId !== authUserId) {
+    //   return 'Unauthorized access'
+    // }
+
+    const groupData = await request.validateUsing(createGroupValidator)
+
+    const schedule = await Schedule.query()
+      .where('id', params.schedule_id)
+      .andWhere('userId', userId)
+      .preload('courses')
+      .firstOrFail()
+
+    // Dodaj kurs do planu
+    await schedule.related('courses').create(groupData)
+
+    return { message: 'Course added to schedule successfully.', schedule }
   }
 }

@@ -16,6 +16,45 @@ const plansAtom = atom(
     set(plansIds, values);
   },
 );
+
+const loginUser = async () => {
+  const userData = {
+    id: "123",
+    password: "aa",
+  };
+  try {
+    await fetch("http://localhost:3333/login", {
+      method: "post",
+      body: JSON.stringify(userData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+  } catch (e) {
+    /* empty */
+  }
+};
+
+const postPlanToBackend = async (scheduleId: string) => {
+  const scheduleData = {
+    id: scheduleId,
+    name: "Nowy plan",
+    userId: "123",
+  };
+  try {
+    await fetch("http://localhost:3333/users/123/schedules", {
+      method: "post",
+      body: JSON.stringify(scheduleData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+  } catch (e) {
+    /* empty */
+  }
+};
 const Plans = () => {
   const [plans, setPlans] = useAtom(plansAtom);
   const router = useRouter();
@@ -24,6 +63,10 @@ const Plans = () => {
     const newPlan = {
       id: uuid,
     };
+
+    void loginUser();
+
+    void postPlanToBackend(newPlan.id);
 
     void window.umami?.track("Create plan", {
       numberOfPlans: plans.length,
